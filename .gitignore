@@ -16,6 +16,9 @@ frontend/coverage
 # next.js
 frontend/.next/
 frontend/out/
+tourist-blockchain/node_modules
+tourist-blockchain/artifacts
+tourist-blockchain/cache
 
 # production
 frontend/build
