@@ -1,99 +1,57 @@
-import crypto from 'crypto';
+import crypto from "crypto";
+import { Wallet, parseEther } from "ethers";
+import {
+  contract,
+  provider,
+  wallet as systemWallet,
+} from "../config/blockchain.js";
 
-// Blockchain Service - PLACEHOLDER IMPLEMENTATION
-// TODO: Implement actual blockchain integration later
-// For now, just generates hashes for tamper detection
+// Register new tourist with unique wallet
+export async function registerTouristOnChain({ aadhaar, name, phone }) {
+  const aadhaarHash = crypto.createHash("sha256").update(aadhaar).digest("hex");
 
-/**
- * Generate SHA-256 hash for session data
- * Simple hash generation - replace with actual blockchain later
- */
-export const generateSessionHash = (sessionData) => {
-    try {
-        const dataString = typeof sessionData === 'string'
-            ? sessionData
-            : JSON.stringify(sessionData);
+  // Create unique tourist wallet
+  const touristWallet = Wallet.createRandom().connect(provider);
 
-        return crypto
-            .createHash('sha256')
-            .update(dataString)
-            .digest('hex');
-    } catch (error) {
-        console.error('Error generating session hash:', error);
-        // Return a placeholder hash if something fails
-        return crypto.randomBytes(32).toString('hex');
-    }
-};
+  // Fund tourist wallet for gas
+  const fundTx = await systemWallet.sendTransaction({
+    to: touristWallet.address,
+    value: parseEther("0.01"),
+  });
+  await fundTx.wait();
 
-/**
- * Verify session integrity - PLACEHOLDER
- * Always returns true for now
- */
-export const verifySessionIntegrity = (session, providedHash) => {
-    // TODO: Implement actual verification
-    return true;
-};
+  // Register tourist using system wallet
+  const tx = await contract.registerTourist(
+    touristWallet.address,
+    aadhaarHash,
+    name,
+    phone
+  );
 
-/**
- * Generate hash for alert - PLACEHOLDER
- */
-export const generateAlertHash = (alertData) => {
-    try {
-        const dataString = typeof alertData === 'string'
-            ? alertData
-            : JSON.stringify(alertData);
+  await tx.wait();
 
-        return crypto
-            .createHash('sha256')
-            .update(dataString)
-            .digest('hex');
-    } catch (error) {
-        console.error('Error generating alert hash:', error);
-        return crypto.randomBytes(32).toString('hex');
-    }
-};
+  return {
+    touristId: touristWallet.address,
+    name,
+    phone,
+    aadhaarHash,
+    txHash: tx.hash,
+  };
+}
 
-/**
- * Generate event chain hash - PLACEHOLDER
- */
-export const generateEventChainHash = (previousHash = '', newEventData) => {
-    try {
-        const combined = previousHash + JSON.stringify(newEventData);
-        return crypto
-            .createHash('sha256')
-            .update(combined)
-            .digest('hex');
-    } catch (error) {
-        console.error('Error generating event chain hash:', error);
-        return crypto.randomBytes(32).toString('hex');
-    }
-};
+// Verify tourist
+export async function verifyTouristOnChain(touristId) {
+  return await contract.verifyTourist(touristId);
+}
 
-/**
- * Create signed timestamp - PLACEHOLDER
- */
-export const createSignedTimestamp = (data) => {
-    return {
-        data,
-        timestamp: Date.now(),
-        signature: 'PLACEHOLDER_SIGNATURE'
-    };
-};
+// Get tourist details
+export async function getTouristFromChain(touristId) {
+  const data = await contract.getTourist(touristId);
 
-/**
- * Verify signed timestamp - PLACEHOLDER
- * Always returns true for now
- */
-export const verifySignedTimestamp = (signedData) => {
-    // TODO: Implement actual verification
-    return true;
-};
-
-export default {
-    generateSessionHash,
-    verifySessionIntegrity,
-    generateAlertHash,
-    generateEventChainHash,
-    createSignedTimestamp,
-    verifySignedTimestamp
-};
+  return {
+    name: data[0],
+    phone: data[1],
+    createdAt: Number(data[2]),
+    active: data[3],
+  };
+}
