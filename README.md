@@ -134,7 +134,7 @@ Encrypted Storage (IPFS - optional)
 
 ### 1️⃣ Clone Repository
 
-```bash
+bash
 
 
 
