@@ -1,18 +1,18 @@
-"use client";
-
+import React from "react";
 import Navbar from "../components/Navbar";
 import Hero from "../components/Hero";
 import Features from "../components/Features";
 import Footer from "../components/Footer";
 
-export default function HomePage() {
+const LandingPage: React.FC = () => {
   return (
-    <main className="min-h-screen bg-[#0b0f14] text-white">
+    <div className="min-h-screen bg-[#0b0f14] text-white">
       <Navbar />
       <Hero />
       <Features />
       <Footer />
-    </main>
+    </div>
   );
-}
+};
 
+export default LandingPage;
