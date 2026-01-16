@@ -22,6 +22,7 @@ router.post('/auth/reset-password', authController.resetPassword);
 router.post('/users/register', userController.registerUser);
 router.post('/users/login', userController.loginUser);
 router.post('/users/google-login', userController.googleLogin);
+router.get('/users/check-username/:username', userController.checkUsernameAvailability);
 
 // Protected user routes
 router.get('/users/me', authMiddleware, userController.getMe);
