@@ -1,34 +1,43 @@
 "use client";
 
-const Sidebar = () => {
-  const menu = [
-    "Dashboard",
-    "Live Tracking",
-    "Emergency Alerts",
-    "Tourist IDs",
-    "Reports",
-    "Analytics",
-    "Setting",
-  ];
+import { useRouter, usePathname } from "next/navigation";
+
+const menu = [
+  { label: "Overview", path: "/dashboard" },
+  { label: "Live Tracking", path: "/dashboard/live-tracking" },
+  { label: "Emergency Alerts", path: "#" },
+  { label: "Tourist IDs", path: "#" },
+  { label: "Reports", path: "#" },
+  { label: "Analytics", path: "#" },
+  { label: "Settings", path: "#" },
+];
+
+export default function Sidebar() {
+  const router = useRouter();
+  const pathname = usePathname();
 
   return (
-    <aside className="w-64 bg-[#111b26] text-gray-300 p-6 space-y-6">
-      <h2 className="text-emerald-400 text-xl font-bold">
-        SafarShield
+    <aside className="w-64 bg-[#0f1a26] p-6 space-y-6">
+      <h2 className="text-xl font-bold text-emerald-400">
+        HimalayanGuard
       </h2>
 
-      <nav className="space-y-3">
+      <nav className="space-y-2">
         {menu.map((item) => (
           <div
-            key={item}
-            className="px-3 py-2 rounded-md cursor-pointer hover:bg-[#1c2a3a] hover:text-white transition"
+            key={item.label}
+            onClick={() => item.path !== "#" && router.push(item.path)}
+            className={`px-3 py-2 rounded-md cursor-pointer transition
+              ${
+                pathname === item.path
+                  ? "bg-emerald-600 text-white"
+                  : "text-gray-300 hover:bg-[#1c2a3a]"
+              }`}
           >
-            {item}
+            {item.label}
           </div>
         ))}
       </nav>
     </aside>
   );
-};
-
-export default Sidebar;
+}
