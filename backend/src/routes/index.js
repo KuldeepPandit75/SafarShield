@@ -17,6 +17,8 @@ router.get('/health', (req, res) => {
 router.post('/auth/send-otp', authController.sendOTP);
 router.post('/auth/verify-otp', authController.verifyOTP);
 router.post('/auth/reset-password', authController.resetPassword);
+router.get('/auth/verify-token', authController.verifyToken); // JWT verification
+
 
 // ============ USER ROUTES ============
 router.post('/users/register', userController.registerUser);

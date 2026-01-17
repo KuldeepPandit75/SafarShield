@@ -242,3 +242,84 @@ export const resetPassword = async (req, res) => {
     });
   }
 };
+
+// JWT Token Verification Endpoint
+export const verifyToken = async (req, res) => {
+  try {
+    const token = req.cookies?.token || req.headers.authorization?.split(" ")[1];
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "No token provided",
+      });
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Get user from database
+    const user = await userModel.findById(decoded._id).select('-password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: "Account is deactivated",
+      });
+    }
+
+    // Return user data
+    return res.status(200).json({
+      success: true,
+      message: "Token is valid",
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        fullname: user.fullname,
+        role: user.role,
+        avatar: user.avatar,
+        bio: user.bio,
+        isVerified: user.isVerified,
+        consentGiven: user.consentGiven,
+        emergencyContacts: user.emergencyContacts,
+        badgeNumber: user.badgeNumber,
+        department: user.department,
+        jurisdiction: user.jurisdiction,
+        socketId: user.socketId,
+        lastLoginAt: user.lastLoginAt,
+        isActive: user.isActive,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      }
+    });
+  } catch (error) {
+    console.error("Token verification error:", error);
+
+    if (error instanceof jwt.JsonWebTokenError) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid token",
+      });
+    }
+
+    if (error instanceof jwt.TokenExpiredError) {
+      return res.status(401).json({
+        success: false,
+        message: "Token expired",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Error verifying token",
+    });
+  }
+};
