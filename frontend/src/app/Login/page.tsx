@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AuthHeader from "@/components/AuthHeader";
 import useAuthStore from "@/Zustand_Store/AuthStore";
 
 export default function LoginPage() {
-  const { error, login, loading } = useAuthStore();
+  const { error, login, loading, isAuthenticated, user, verifyUser, getRedirectPath } = useAuthStore();
   const router = useRouter();
 
   const [formData, setFormData] = useState({
@@ -19,6 +19,18 @@ export default function LoginPage() {
     email: "",
     password: ""
   });
+
+  // Check if already authenticated and redirect
+  useEffect(() => {
+    verifyUser();
+  }, [verifyUser]);
+
+  useEffect(() => {
+    if (!loading && isAuthenticated && user) {
+      const redirectPath = getRedirectPath(user);
+      router.replace(redirectPath);
+    }
+  }, [loading, isAuthenticated, user, router, getRedirectPath]);
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.([^\s@]{2,})+$/;
@@ -53,8 +65,8 @@ export default function LoginPage() {
 
     setIsLoading(true);
     try {
-      await login(formData.email, formData.password);
-      router.push('/');
+      const redirectPath = await login(formData.email, formData.password);
+      router.push(redirectPath);
     } catch (err) {
       console.error('Login failed:', err);
     } finally {

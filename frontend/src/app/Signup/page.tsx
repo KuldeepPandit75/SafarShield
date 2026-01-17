@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AuthHeader from "@/components/AuthHeader";
 import useAuthStore, { Role } from "@/Zustand_Store/AuthStore";
 
 export default function SignUpPage() {
-  const { error, register, checkUsernameAvailability, googleLogin } = useAuthStore();
+  const { error, register, checkUsernameAvailability, googleLogin, isAuthenticated, user, loading, verifyUser, getRedirectPath } = useAuthStore();
   const router = useRouter();
 
   const [formData, setFormData] = useState({
@@ -16,7 +16,7 @@ export default function SignUpPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'tourist' as 'tourist' | 'officer',
+    role: 'traveller' as 'traveller' | 'officer',
     agreeToTerms: false
   });
 
@@ -30,6 +30,18 @@ export default function SignUpPage() {
     username: "",
     terms: ""
   });
+
+  // Check if already authenticated and redirect
+  useEffect(() => {
+    verifyUser();
+  }, [verifyUser]);
+
+  useEffect(() => {
+    if (!loading && isAuthenticated && user) {
+      const redirectPath = getRedirectPath(user);
+      router.replace(redirectPath);
+    }
+  }, [loading, isAuthenticated, user, router, getRedirectPath]);
 
   const handleCheckUsername = async (username: string) => {
     if (!username) return true;
@@ -137,7 +149,7 @@ export default function SignUpPage() {
 
     setIsLoading(true);
     try {
-      await register({
+      const redirectPath = await register({
         fullname: {
           firstname: formData.firstName,
           lastname: formData.lastName
@@ -146,7 +158,7 @@ export default function SignUpPage() {
         email: formData.email,
         password: formData.password,
       });
-      router.push('/');
+      router.push(redirectPath);
     } catch (err) {
       console.error('Registration failed:', err);
     } finally {
@@ -258,9 +270,8 @@ export default function SignUpPage() {
                 className="w-full px-4 py-2 bg-[#0b0f14] border border-gray-600 rounded-md focus:outline-none focus:border-emerald-400 text-white"
                 required
               >
-                <option value="tourist">Tourist</option>
-                <option value="police">Police Officer</option>
-                <option value="admin">Admin</option>
+                <option value="traveller">Traveller</option>
+                <option value="officer">Officer</option>
               </select>
               <p className="text-gray-400 text-xs mt-1">Select your role</p>
             </div>

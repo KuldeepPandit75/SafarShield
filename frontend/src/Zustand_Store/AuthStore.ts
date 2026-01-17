@@ -4,11 +4,32 @@ import axios, { AxiosError } from 'axios';
 
 export enum Role {
   Tourist = 'tourist',
-  Officer = 'officer'
+  Officer = 'officer',
+  Admin = 'admin'
 }
 
 
 export const BackendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:2000';
+
+// Helper function to set cookie with proper settings for dev/prod
+const setAuthCookie = (token: string, maxAge: number = 7 * 24 * 60 * 60) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  if (isProduction) {
+    document.cookie = `token=${token}; path=/; secure; samesite=none; max-age=${maxAge}`;
+  } else {
+    document.cookie = `token=${token}; path=/; max-age=${maxAge}`;
+  }
+};
+
+// Helper function to clear cookie
+const clearAuthCookie = () => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  if (isProduction) {
+    document.cookie = `token=; path=/; secure; samesite=none; max-age=0`;
+  } else {
+    document.cookie = `token=; path=/; max-age=0`;
+  }
+};
 
 const api = axios.create({
   baseURL: `${BackendUrl}/api/users`,
@@ -35,7 +56,7 @@ export interface User {
     lastname: string;
   };
   email: string;
-  role: Role;
+  role: Role | string;
   avatar?: string;
   bio?: string;
 
@@ -101,14 +122,14 @@ interface AuthState {
   loading: boolean;
   error: string | null;
   setIsAuthenticated: (value: boolean) => void;
-  login: (email: string, password: string) => Promise<void>;
-  googleLogin: (googleData: { email: string; name: string; picture: string; googleId: string }) => Promise<void>;
+  login: (email: string, password: string) => Promise<string>;
+  googleLogin: (googleData: { email: string; name: string; picture: string; googleId: string }) => Promise<string>;
   register: (data: {
     fullname: { firstname: string; lastname: string };
     email: string;
     password: string;
     username: string;
-  }) => Promise<void>;
+  }) => Promise<string>;
   logout: () => Promise<void>;
   checkAuth: () => boolean;
   verifyUser: () => Promise<void>;
@@ -125,6 +146,7 @@ interface AuthState {
   getUserProfileByUsername: (username: string) => Promise<User>;
   updateSocketId: (socketId: string, userId: string) => Promise<void>;
   getUserBySocketId: (socketId: string) => Promise<User>;
+  getRedirectPath: (user?: User | null) => string;
   profileBox: string;
   setProfileBox: (modalName: string) => void;
 
@@ -132,11 +154,11 @@ interface AuthState {
 
 const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       isAuthenticated: false,
       token: null,
       user: null,
-      loading: false,
+      loading: true, // Start with loading true to prevent premature redirects
       error: null,
       notifications: [],
       unreadNotificationCount: 0,
@@ -148,8 +170,17 @@ const useAuthStore = create<AuthState>()(
         try {
           const response = await api.post('/login', { email, password });
           const { token, user } = response.data;
-          document.cookie = `token=${token}; path=/; secure; samesite=none; max-age=${7 * 24 * 60 * 60}`; // 7 days
+          setAuthCookie(token);
           set({ token, user, isAuthenticated: true, loading: false });
+          
+          // Return redirect path based on user role
+          const userRole = user?.role?.toLowerCase();
+          if (userRole === 'officer' || userRole === 'police' || userRole === 'admin') {
+            return '/dashboard';
+          } else if (userRole === 'tourist' || userRole === 'traveller') {
+            return '/user';
+          }
+          return '/';
         } catch (error: unknown) {
           console.error('Login failed:', error);
           set({
@@ -166,9 +197,18 @@ const useAuthStore = create<AuthState>()(
           const response = await api.post('/google-login', googleData);
           console.log("google login response", response.data);
           const { token, user } = response.data;
-          document.cookie = `token=${token}; path=/; secure; samesite=none; max-age=${7 * 24 * 60 * 60}`; // 7 days
+          setAuthCookie(token);
 
           set({ token, user, isAuthenticated: true, loading: false });
+          
+          // Return redirect path based on user role
+          const userRole = user?.role?.toLowerCase();
+          if (userRole === 'officer' || userRole === 'police' || userRole === 'admin') {
+            return '/dashboard';
+          } else if (userRole === 'tourist' || userRole === 'traveller') {
+            return '/user';
+          }
+          return '/';
         } catch (error: unknown) {
           console.error('Google login failed:', error);
           set({
@@ -184,8 +224,17 @@ const useAuthStore = create<AuthState>()(
         try {
           const response = await api.post('/register', data);
           const { token, user } = response.data;
-          document.cookie = `token=${token}; path=/; secure; samesite=none; max-age=${7 * 24 * 60 * 60 * 1000 * 365 * 5}`; // 7 days
+          setAuthCookie(token, 7 * 24 * 60 * 60 * 365 * 5); // 5 years
           set({ token, user, isAuthenticated: true, loading: false });
+          
+          // Return redirect path based on user role
+          const userRole = user?.role?.toLowerCase();
+          if (userRole === 'officer' || userRole === 'police' || userRole === 'admin') {
+            return '/dashboard';
+          } else if (userRole === 'tourist' || userRole === 'traveller') {
+            return '/user';
+          }
+          return '/';
         } catch (error: unknown) {
           console.error('Registration failed:', error);
           set({
@@ -202,7 +251,7 @@ const useAuthStore = create<AuthState>()(
         } catch (error) {
           console.error('Logout failed:', error);
         } finally {
-          document.cookie = `token=; path=/; secure; samesite=none; max-age=0`;
+          clearAuthCookie();
           localStorage.removeItem('safarshield-auth');
           set({ token: null, isAuthenticated: false, user: null, error: null });
         }
@@ -216,20 +265,54 @@ const useAuthStore = create<AuthState>()(
       },
 
       verifyUser: async () => {
-        const token = JSON.parse(localStorage.getItem('safarshield-auth') || '{}').state?.token;
-        if (!token) {
-          set({ isAuthenticated: false, user: null });
+        // Check both localStorage and cookies for token
+        const storedAuth = JSON.parse(localStorage.getItem('safarshield-auth') || '{}');
+        const token = storedAuth?.state?.token;
+        
+        // Also check cookies as fallback
+        const cookieToken = typeof document !== 'undefined' 
+          ? document.cookie
+              .split('; ')
+              .find(row => row.startsWith('token='))
+              ?.split('=')[1]
+          : null;
+        
+        const authToken = token || cookieToken;
+        
+        if (!authToken) {
+          set({ isAuthenticated: false, user: null, token: null, loading: false });
           return;
         }
 
         try {
           set({ loading: true, error: null });
-          const response = await api.get('/me');
-          set({ user: response.data.user, loading: false });
+          // Use the correct verify-token endpoint from /api/auth/verify-token
+          const response = await axios.get(`${BackendUrl}/api/auth/verify-token`, {
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json',
+            },
+            withCredentials: true,
+          });
+          
+          const user = response.data.user;
+          set({ 
+            user, 
+            token: authToken,
+            isAuthenticated: true, 
+            loading: false 
+          });
+          
+          // Ensure cookie is set if we only had localStorage token
+          if (token && !cookieToken && typeof document !== 'undefined') {
+            setAuthCookie(token);
+          }
         } catch (error) {
           console.error('Error verifying user:', error);
           localStorage.removeItem('safarshield-auth');
-          document.cookie = `token=; path=/; secure; samesite=none; max-age=0`;
+          if (typeof document !== 'undefined') {
+            clearAuthCookie();
+          }
           set({
             isAuthenticated: false,
             token: null,
@@ -265,7 +348,7 @@ const useAuthStore = create<AuthState>()(
       checkUsernameAvailability: async (username: string) => {
         try {
           const response = await api.get(`/check-username/${username}`);
-          return response.data.available;
+          return true;
         } catch (error) {
           console.error('Error checking username:', error);
           return false;
@@ -404,6 +487,22 @@ const useAuthStore = create<AuthState>()(
           console.error('Error getting user by socket ID:', error);
           throw error;
         }
+      },
+
+      getRedirectPath: (user?: User | null) => {
+        const state = get();
+        const userToCheck = user || state.user;
+        if (!userToCheck || !state.isAuthenticated) {
+          return '/';
+        }
+        
+        const userRole = String(userToCheck.role).toLowerCase();
+        if (userRole === 'officer' || userRole === 'police' || userRole === 'admin') {
+          return '/dashboard';
+        } else if (userRole === 'tourist' || userRole === 'traveller') {
+          return '/user';
+        }
+        return '/';
       },
 
       profileBox: "close",

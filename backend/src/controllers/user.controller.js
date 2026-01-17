@@ -1,4 +1,4 @@
-import {User as  userModel} from "../models/user.models.js";
+import { User as userModel } from "../models/user.models.js";
 import userService from "../services/user.service.js";
 import { validationResult } from "express-validator";
 import BlacklistToken from "../models/blacklistToken.model.js";
@@ -29,7 +29,7 @@ export const registerUser = async (req, res) => {
     return res.status(400).json({ message: "Email already exists" });
   }
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+  // No need to hash password here, the model pre-save hook handles it
 
   const user = await userService.createUser({
     fullname: {
@@ -37,16 +37,16 @@ export const registerUser = async (req, res) => {
       lastname: fullname.lastname,
     },
     email,
-    password: hashedPassword,
+    password, // Pass plain password
     role,
     username,
   });
 
-  const token = user.generateAuthToken();
+  const token = user.generateAccessToken(); // logic updated
 
   res.cookie("token", token, {
     httpOnly: true,
-    secure: false,
+    secure: false, // Update to true if using HTTPS in production
     sameSite: "none",
     maxAge: 1000 * 60 * 60 * 24 * 365 * 5,
   });
@@ -68,13 +68,15 @@ export const loginUser = async (req, res) => {
     return res.status(401).json({ message: "Invalid email or password" });
   }
 
-  const isMatch = await user.comparePassword(password);
+  // Use the new method name from updated User model
+  const isMatch = await user.isPasswordCorrect(password);
 
   if (!isMatch) {
     return res.status(401).json({ message: "Invalid email or password" });
   }
 
-  const token = user.generateAuthToken();
+  // Use the new method name from updated User model
+  const token = user.generateAccessToken();
 
   res.cookie("token", token, {
     httpOnly: true,
