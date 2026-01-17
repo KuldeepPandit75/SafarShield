@@ -5,7 +5,7 @@ import {
   OTP_RESEND_MIN,
 } from "../config/app.config.js";
 import { sendMail } from "../config/mailConfig.js";
-import userModel from "../models/user.models.js";
+import { User as userModel} from "../models/user.models.js";
 import { generateRandomNDigits } from "../helpers/generalHelper.js";
 import {
   randomBytes,

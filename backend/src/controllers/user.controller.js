@@ -1,4 +1,4 @@
-import userModel from "../models/user.models.js";
+import {User as  userModel} from "../models/user.models.js";
 import userService from "../services/user.service.js";
 import { validationResult } from "express-validator";
 import BlacklistToken from "../models/blacklistToken.model.js";
@@ -172,6 +172,7 @@ export const updateUser = async (req, res) => {
 
 export const checkUsernameAvailability = async (req, res) => {
   const { username } = req.params;
+  console.log("working");
 
   if (!username) {
     return res.status(400).json({

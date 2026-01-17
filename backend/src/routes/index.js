@@ -1,5 +1,5 @@
 import express from 'express';
-import authMiddleware from '../middlewares/auth.middleware.js';
+import {verifyJWT as authMiddleware} from '../middlewares/auth.middleware.js';
 import * as sessionController from '../controllers/session.controller.js';
 import * as alertController from '../controllers/alert.controller.js';
 import * as locationController from '../controllers/location.controller.js';
@@ -22,6 +22,7 @@ router.post('/auth/reset-password', authController.resetPassword);
 router.post('/users/register', userController.registerUser);
 router.post('/users/login', userController.loginUser);
 router.post('/users/google-login', userController.googleLogin);
+router.get('/users/check-username/:username', userController.checkUsernameAvailability);
 
 // Protected user routes
 router.get('/users/me', authMiddleware, userController.getMe);

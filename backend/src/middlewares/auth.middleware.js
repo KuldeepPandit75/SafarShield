@@ -1,33 +1,44 @@
-import User from "../models/user.models.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiError } from "../utils/ApiError.js";
+// import { ApiResponse } from "../utils/ApiResponse";
 import jwt from "jsonwebtoken";
-import BlacklistToken from '../models/blacklistToken.model.js';
+// import { User } from "../models/user.model.js";
+import { User } from "../models/user.models.js";
 
-const authMiddleware = async (req, res, next) => {
-  const token = req.cookies?.token || req.headers.authorization?.split(" ")[1];
-
-  if (!token) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  const isBlacklisted = await BlacklistToken.findOne({ token });
-
-  if (isBlacklisted) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
+const verifyJWT = asyncHandler(async (req, res, next) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded._id);
-    if (!user) {
-      return res.status(401).json({ message: "Unauthorized" });
+    const token =
+      req.cookies?.accessToken ||
+      req.header("Authorization")?.replace("Bearer ", "");
+
+    // console.log(token);
+    if (!token) {
+      throw new ApiError(401, "Unauthorization request");
     }
+
+    const decoderToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    const user = await User.findById(decoderToken?._id).select(
+      "-password -refreshToken"
+    );
+
+    if (!user) {
+      throw new ApiError(404, "Invaild Access Token");
+    }
+
     req.user = user;
 
-    return next();
+    next();
   } catch (error) {
-    return res.status(401).json({ message: "Unauthorized" });
+    throw new ApiError(401, error?.message || "Invaild Access Token");
   }
+});
+
+const authorizeRoles = (...allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+      throw new ApiError(403, "Forbidden: You don't have access");
+    }
+    next();
+  };
 };
-
-export default authMiddleware;
-
+export { verifyJWT, authorizeRoles };
