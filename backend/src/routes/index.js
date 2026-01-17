@@ -1,5 +1,5 @@
 import express from 'express';
-import authMiddleware from '../middlewares/auth.middleware.js';
+import {verifyJWT as authMiddleware} from '../middlewares/auth.middleware.js';
 import * as sessionController from '../controllers/session.controller.js';
 import * as alertController from '../controllers/alert.controller.js';
 import * as locationController from '../controllers/location.controller.js';
