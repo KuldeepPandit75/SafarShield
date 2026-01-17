@@ -2,37 +2,29 @@
 
 import Sidebar from "@/components/dashboard/Sidebar";
 import Topbar from "@/components/dashboard/Topbar";
-import MapPanel from "@/components/dashboard/MapPanel";
+import AuthorityMap from "@/components/dashboard/AuthorityMap";
 import AlertsPanel from "@/components/dashboard/AlertsPanel";
-import AnalyticsPanel from "@/components/dashboard/AnalyticsPanel";
+import StatsPanel from "@/components/dashboard/StatsPanel";
 
 export default function DashboardPage() {
   return (
     <div className="flex min-h-screen bg-[#0b0f14] text-white">
-      
-      {/* Sidebar */}
       <Sidebar />
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col">
         <Topbar />
 
         <div className="p-6 grid grid-cols-12 gap-6">
-          
-          {/* Map */}
-          <div className="col-span-8">
-            <MapPanel />
+          <div className="col-span-8 h-96">
+            <AuthorityMap />
           </div>
 
-          {/* Right Panels */}
           <div className="col-span-4 space-y-6">
             <AlertsPanel />
-            <AnalyticsPanel />
+            <StatsPanel />
           </div>
-
         </div>
       </div>
-
     </div>
   );
 }

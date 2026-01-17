@@ -1,22 +1,14 @@
-const AlertsPanel = () => {
-  const alerts = Array(4).fill("SOS triggered: bjgh kjegn");
-
+export default function AlertsPanel() {
   return (
-    <div className="bg-[#0f1a26] rounded-xl p-4">
-      <h3 className="font-semibold mb-4">Real Time Alerts</h3>
+    <div className="bg-[#0f1a26] p-4 rounded-xl space-y-3">
+      <h3 className="font-semibold">Real-Time Alerts</h3>
 
-      <div className="space-y-3">
-        {alerts.map((alert, i) => (
-          <div
-            key={i}
-            className="flex items-start gap-2 text-sm text-red-400"
-          >
-            🔺 {alert}
-          </div>
-        ))}
+      <div className="text-red-400 text-sm">
+        🔴 SOS Triggered – Tourist #2981
+      </div>
+      <div className="text-red-400 text-sm">
+        🔴 Fall Detected – Zone B
       </div>
     </div>
   );
-};
-
-export default AlertsPanel;
+}
